@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐱 Cat's Bank</title>
+
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      margin: 20px;
+    }
+
+    .box{
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+    }
+
+    input, select, button, textarea{
+      padding: 10px;
+      margin: 5px;
+      border: none;
+      border-radius: 8px;
+      width: calc(100% - 12px);
+      box-sizing: border-box;
+    }
+
+    button{
+      background: orange;
+      color: white;
+      cursor: pointer;
+      width: auto;
+    }
+
+    button:hover{
+      background: darkorange;
+    }
+
+    h1, h2, h3{
+      color: orange;
+    }
+
+    .qr-box{
+      text-align: center;
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+    }
+
+    .qr-box img{
+      display: block;
+      margin: 0 auto;
+      background: white;
+      padding: 10px;
+      border-radius: 12px;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      background: #111;
+      padding: 10px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🐱 Cat's Bank</h1>
+
+  <div class="box">
+    <h2>Utente</h2>
+
+    <input id="code" placeholder="Codice">
+    <button onclick="login()">Entra</button>
+
+    <div id="userArea" style="display:none;">
+      <p><b>Saldo:</b> <span id="saldo"></span></p>
+
+      <h3>🛒 Negozio</h3>
+      <div id="shopArea"></div>
+
+      <input id="nome" placeholder="Nome">
+
+      <select id="outfit">
+        <option>🧢 Outfit Blu</option>
+        <option>👑 Outfit Reale</option>
+        <option>😎 Outfit Cool</option>
+        <option>🐱 Outfit Gatto</option>
+      </select>
+
+      <button onclick="salvaProfilo()">Salva Profilo</button>
+
+      <br><br>
+
+      <input id="deposito" type="number" placeholder="Crediti da depositare">
+      <button onclick="deposita()">Deposita</button>
+
+      <p id="msg"></p>
+
+      <h3>💸 Trasferisci Crediti</h3>
+
+      <input id="targetCode" placeholder="Codice destinatario">
+      <input id="transferAmount" type="number" placeholder="Crediti">
+      <button onclick="trasferisci()">Invia</button>
+
+      <h3>📰 Cat's News</h3>
+      <div id="newsArea"></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>🔒 Admin</h2>
+
+    <input id="adminPass" type="password" placeholder="Password Admin">
+    <button onclick="adminLogin()">Entra</button>
+
+    <div id="adminArea" style="display:none;">
+      <h3>🛒 Aggiungi Oggetto</h3>
+
+      <input id="shopEmoji" placeholder="Emoji">
+      <input id="shopName" placeholder="Nome oggetto">
+
+      <select id="shopCategory">
+        <option>👕 Outfit</option>
+        <option>💳 Carta</option>
+        <option>🎁 Merch</option>
+      </select>
+
+      <input id="shopPrice" type="number" placeholder="Prezzo">
+      <button onclick="aggiungiOggetto()">Aggiungi</button>
+
+      <h3>Crea Codice</h3>
+      <input id="newCode" placeholder="Nuovo Codice">
+      <input id="newCredits" type="number" placeholder="Crediti">
+      <button onclick="creaCodice()">Crea Codice</button>
+
+      <h3>Ricarica Codice</h3>
+      <input id="ricCode" placeholder="Codice">
+      <input id="ricAmount" type="number" placeholder="Crediti">
+      <button onclick="ricarica()">Ricarica</button>
+
+      <h3>❌ Elimina Codice</h3>
+      <input id="deleteCode" placeholder="Codice">
+      <button onclick="eliminaCodice()">Elimina</button>
+
+      <h3>📰 Scrivi Notizia</h3>
+      <textarea id="newsText" rows="5" cols="40"></textarea>
+      <button onclick="salvaNews()">Pubblica</button>
+
+      <h3>📜 Cronologia</h3>
+      <pre id="historyBox"></pre>
+
+      <h3>Codici Esistenti</h3>
+      <pre id="lista"></pre>
+    </div>
+  </div>
+
+  <script>
+    let shop = JSON.parse(localStorage.getItem("shop")) || [];
+    let codes = JSON.parse(localStorage.getItem("codes")) || {
+      "CAT100": 1000,
+      "07rainbow07": 5000,
+      "diegocat12": 0
+    };
+    let users = JSON.parse(localStorage.getItem("users")) || {};
+    let currentCode = "";
+    let history = JSON.parse(localStorage.getItem("history")) || [];
+    let news = localStorage.getItem("news") || "";
+    const ADMIN_PASSWORD = "MEGAWARCAT17";
+
+    function salvaDati(){
+      localStorage.setItem("codes", JSON.stringify(codes));
+      localStorage.setItem("users", JSON.stringify(users));
+    }
+
+    function salvaShop(){
+      localStorage.setItem("shop", JSON.stringify(shop));
+    }
+
+    function salvaCronologia(){
+      localStorage.setItem("history", JSON.stringify(history));
+    }
+
+    function aggiornaLista(){
+      let testo = "";
+      for(let c in codes){
+        testo += c + " = " + codes[c] + " crediti\n";
+      }
+      document.getElementById("lista").textContent = testo;
+    }
+
+    function aggiornaCronologia(){
+      let box = document.getElementById("historyBox");
+      if(box) box.textContent = history.join("\n");
+    }
+
+    function aggiornaNews(){
+      let area = document.getElementById("newsArea");
+      if(area) area.innerHTML = news;
+    }
+
+    function aggiungiOggetto(){
+      let emoji = document.getElementById("shopEmoji").value;
+      let nome = document.getElementById("shopName").value;
+      let categoria = document.getElementById("shopCategory").value;
+      let prezzo = parseInt(document.getElementById("shopPrice").value);
+
+      if(!nome || isNaN(prezzo)){
+        alert("Dati non validi!");
+        return;
+      }
+
+      shop.push({
+        emoji: emoji,
+        nome: nome,
+        categoria: categoria,
+        prezzo: prezzo
+      });
+
+      salvaShop();
+      aggiornaNegozio();
+      alert("Oggetto aggiunto!");
+    }
+
+    function aggiornaNegozio(){
+      let html = "";
+      shop.forEach((item,index)=>{
+        html += `
+          <p>
+            ${item.emoji || "📦"} ${item.nome} - ${item.prezzo} crediti
+            <button onclick="compra(${index})">Compra</button>
+            <button onclick="eliminaOggetto(${index})">🗑️</button>
+          </p>
+        `;
+      });
+
+      let area = document.getElementById("shopArea");
+      if(area) area.innerHTML = html;
+    }
+
+    function eliminaOggetto(index){
+      shop.splice(index, 1);
+      salvaShop();
+      aggiornaNegozio();
+      alert("Oggetto eliminato!");
+    }
+
+    function compra(index){
+      let item = shop[index];
+
+      if(codes[currentCode] < item.prezzo){
+        alert("Crediti insufficienti!");
+        return;
+      }
+
+      codes[currentCode] -= item.prezzo;
+      salvaDati();
+      document.getElementById("saldo").textContent = codes[currentCode];
+
+      if(item.categoria === "👕 Outfit"){
+        if(!users[currentCode].ownedOutfits){
+          users[currentCode].ownedOutfits = [];
+        }
+        users[currentCode].ownedOutfits.push(item.emoji + " " + item.nome);
+      }
+
+      salvaDati();
+      alert("Hai comprato: " + item.nome);
+    }
+
+    function login(){
+      let code = document.getElementById("code").value.trim();
+
+      if(codes[code] === undefined){
+        alert("Codice non valido!");
+        return;
+      }
+
+      currentCode = code;
+
+      if(!users[code]){
+        users[code] = {
+          nome: "",
+          outfit: "🧢 Outfit Blu",
+          ownedOutfits: ["🧢 Outfit Blu"]
+        };
+      }
+
+      document.getElementById("userArea").style.display = "block";
+      document.getElementById("saldo").textContent = codes[code];
+      document.getElementById("nome").value = users[code].nome;
+      document.getElementById("outfit").value = users[code].outfit;
+    }
+
+    function salvaProfilo(){
+      users[currentCode].nome = document.getElementById("nome").value;
+      users[currentCode].outfit = document.getElementById("outfit").value;
+      salvaDati();
+      alert("Profilo salvato!");
+    }
+
+    function deposita(){
+      let valore = parseInt(document.getElementById("deposito").value);
+
+      if(isNaN(valore) || valore <= 0){
+        alert("Valore non valido!");
+        return;
+      }
+
+      if(valore > codes[currentCode]){
+        alert("Crediti insufficienti!");
+        return;
+      }
+
+      codes[currentCode] -= valore;
+      salvaDati();
+      document.getElementById("saldo").textContent = codes[currentCode];
+      document.getElementById("msg").innerHTML = "✅ " + users[currentCode].nome + " ha depositato " + valore + " crediti nella Cat's Bank.";
+    }
+
+    function adminLogin(){
+      let pass = document.getElementById("adminPass").value;
+
+      if(pass === ADMIN_PASSWORD){
+        document.getElementById("adminArea").style.display = "block";
+        aggiornaLista();
+        alert("Accesso admin riuscito!");
+      } else {
+        alert("Password errata!");
+      }
+    }
+
+    function creaCodice(){
+      let codice = document.getElementById("newCode").value.trim();
+      let crediti = parseInt(document.getElementById("newCredits").value);
+
+      if(!codice || isNaN(crediti)){
+        alert("Inserisci dati validi!");
+        return;
+      }
+
+      codes[codice] = crediti;
+      salvaDati();
+      aggiornaLista();
+      alert("Codice creato!");
+    }
+
+    function ricarica(){
+      let codice = document.getElementById("ricCode").value.trim();
+      let crediti = parseInt(document.getElementById("ricAmount").value);
+
+      if(codes[codice] === undefined){
+        alert("Codice inesistente!");
+        return;
+      }
+
+      if(isNaN(crediti)){
+        alert("Crediti non validi!");
+        return;
+      }
+
+      codes[codice] += crediti;
+      salvaDati();
+      aggiornaLista();
+      alert("Codice ricaricato!");
+    }
+
+    function trasferisci(){
+      let target = document.getElementById("targetCode").value.trim();
+      let amount = parseInt(document.getElementById("transferAmount").value);
+
+      if(codes[target] === undefined){
+        alert("Codice non trovato!");
+        return;
+      }
+
+      if(isNaN(amount) || amount <= 0){
+        alert("Valore non valido!");
+        return;
+      }
+
+      if(amount > codes[currentCode]){
+        alert("Crediti insufficienti!");
+        return;
+      }
+
+      codes[currentCode] -= amount;
+      codes[target] += amount;
+
+      history.push(currentCode + " ha inviato " + amount + " crediti a " + target);
+      salvaDati();
+      salvaCronologia();
+      document.getElementById("saldo").textContent = codes[currentCode];
+      aggiornaCronologia();
+      alert("Trasferimento riuscito!");
+    }
+
+    function eliminaCodice(){
+      let codice = document.getElementById("deleteCode").value.trim();
+
+      if(codes[codice] === undefined){
+        alert("Codice inesistente!");
+        return;
+      }
+
+      delete codes[codice];
+      salvaDati();
+      aggiornaLista();
+      alert("Codice eliminato!");
+    }
+
+    function salvaNews(){
+      news = document.getElementById("newsText").value;
+      localStorage.setItem("news", news);
+      aggiornaNews();
+      alert("Notizia pubblicata!");
+    }
+
+    aggiornaNegozio();
+    aggiornaLista();
+    aggiornaCronologia();
+    aggiornaNews();
+  </script>
+
+</body>
+</html>
